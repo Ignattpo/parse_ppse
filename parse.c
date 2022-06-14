@@ -153,7 +153,7 @@ next_tag:
         if (res != 0)
         {
             fprintf(stderr, "Package error TAG_FCI_PT\n");
-            break;
+            return -1;
         }
         tag += size;
         goto next_tag;

@@ -116,7 +116,11 @@ int main(int argc, char *argv[])
   convert_str_to_int(&parser);
   candidates_list_init(&parser.candidates);
 
-  parse_package(parser.i_package, &parser.candidates);
+  int res = parse_package(parser.i_package, &parser.candidates);
+  if (res != 0)
+  {
+    return -1;
+  }
   candidates_list_print(&parser.candidates);
   candidates_list_free(&parser.candidates);
 
