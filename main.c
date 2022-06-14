@@ -1,28 +1,39 @@
-#include <aio.h>
-#include <errno.h>
-#include <getopt.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "parse.h"
 
-struct parser {
+#include <string.h>
+#include <getopt.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+struct parser_t
+{
   const char *s_package;
-  int8_t *i_package;
+  u_int8_t *i_package;
+  struct candidates_list candidates;
 };
 
-size_t hex_to_num(const char *s) {
+size_t hex_to_num(const char *s)
+{
   char c;
-  int8_t n = 0;
+  u_int8_t n = 0;
 
   errno = 0;
-  for (int i = 0; i < 2; i++,s++) {
-    if (*s >= '0' && *s <= '9') {
+  for (int i = 0; i < 2; i++, s++)
+  {
+    if (*s >= '0' && *s <= '9')
+    {
       n = (n << 4) | (size_t)(*s - '0');
-    } else {
+    }
+    else
+    {
       c = *s & 0xDF;
-      if (c >= 'A' && c <= 'F') {
+      if (c >= 'A' && c <= 'F')
+      {
         n = (n << 4) | (size_t)(c - 'A' + 10);
-      } else {
+      }
+      else
+      {
         goto err;
       }
     }
@@ -33,10 +44,12 @@ err:
   return 0;
 }
 
-static int init_i_package(struct parser *parser) {
+static int init_i_package(struct parser_t *parser)
+{
   size_t len_package = strlen(parser->s_package);
-  int8_t *tmp = malloc(len_package  * sizeof(int8_t));
-  if (!tmp) {
+  u_int8_t *tmp = malloc(len_package * sizeof(u_int8_t));
+  if (!tmp)
+  {
     return -1;
   }
 
@@ -45,14 +58,17 @@ static int init_i_package(struct parser *parser) {
   return 0;
 }
 
-static int convert_str_to_int(struct parser *parser) {
+static int convert_str_to_int(struct parser_t *parser)
+{
   size_t len_package = strlen(parser->s_package);
-  for (int i = 0; i < len_package / 2; i++) {
+  for (int i = 0; i < len_package / 2; i++)
+  {
     parser->i_package[i] = hex_to_num(&parser->s_package[i * 2]);
   }
 }
 
-static int main_parse_arguments(int argc, char *argv[], struct parser *parser) {
+static int main_parse_arguments(int argc, char *argv[], struct parser_t *parser)
+{
   static struct option long_options[] = {
       // аргументы
       {"ppsl", required_argument, 0, 'p'}, // package
@@ -60,21 +76,26 @@ static int main_parse_arguments(int argc, char *argv[], struct parser *parser) {
   };
 
   int c = -1;
-  do {
+  do
+  {
     int option_index = 0;
     /* Получаем следующую опцию... */
     c = getopt_long(argc, argv, "p:", long_options, &option_index);
-    if (c == -1) {
+    if (c == -1)
+    {
       break;
     }
 
-    switch (c) {
+    switch (c)
+    {
     case 'p':
-      if (!optarg) {
+      if (!optarg)
+      {
         break;
       }
       parser->s_package = strdup(optarg);
-      if (parser->s_package == NULL) {
+      if (parser->s_package == NULL)
+      {
         goto aborting_strdup;
       }
       break;
@@ -87,14 +108,17 @@ aborting_strdup:
   return -1;
 }
 
-#define HEAD_PACKAGE 0x6F
-
-int main(int argc, char *argv[]) {
-  struct parser parser = {.s_package = NULL, .i_package = NULL};
+int main(int argc, char *argv[])
+{
+  struct parser_t parser = {.s_package = NULL, .i_package = NULL};
   main_parse_arguments(argc, argv, &parser);
   init_i_package(&parser);
   convert_str_to_int(&parser);
-  printf("%x\n", parser.i_package[0]);
+  candidates_list_init(&parser.candidates);
+
+  parse_package(parser.i_package, &parser.candidates);
+  candidates_list_print(&parser.candidates);
+  candidates_list_free(&parser.candidates);
 
   return 0;
 }
